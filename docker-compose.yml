@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: vacation_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: vacationdb
+      MYSQL_USER: vacationuser
+      MYSQL_PASSWORD: vacationpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./vite-backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vacation_network
+
+  backend:
+    build: ./vite-backend
+    container_name: vacation_backend
+    restart: unless-stopped
+    environment:
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=vacationdb
+      - MYSQL_USER=vacationuser
+      - MYSQL_PASSWORD=vacationpass
+      - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
+      - FLASK_ENV=production
+    ports:
+      - "5001:5001"
+    depends_on:
+      - mysql
+    volumes:
+      - ./vite-backend/images:/app/images
+    networks:
+      - vacation_network
+
+  frontend:
+    build: ./client
+    container_name: vacation_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - vacation_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: vacation_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: vacationuser
+      PMA_PASSWORD: vacationpass
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - vacation_network
+
+volumes:
+  mysql_data:
+
+networks:
+  vacation_network:
+    driver: bridge
+
+
